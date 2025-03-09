@@ -145,7 +145,7 @@ export interface GenerationConfig {
 }
 
 /**
- * Params for {@link GenerativeModel.startChat}.
+ * Parameters for starting a chat session.
  * @public
  */
 export interface StartChatParams extends BaseParams {
@@ -157,6 +157,10 @@ export interface StartChatParams extends BaseParams {
    * This is the name of a `CachedContent` and not the cache object itself.
    */
   cachedContent?: string;
+  /**
+   * Request options for the chat session
+   */
+  requestOptions?: RequestOptions;
 }
 
 /**
