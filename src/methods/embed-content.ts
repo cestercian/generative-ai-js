@@ -20,45 +20,46 @@ import {
   BatchEmbedContentsResponse,
   EmbedContentRequest,
   EmbedContentResponse,
-  RequestOptions,
+  SingleRequestOptions,
 } from "../../types";
 import { Task, makeModelRequest } from "../requests/request";
 
 export async function embedContent(
-  apiKey: string,
   model: string,
+  apiKey: string | undefined,
   params: EmbedContentRequest,
-  requestOptions?: RequestOptions,
+  requestOptions?: SingleRequestOptions,
+  useAdc: boolean = false,
 ): Promise<EmbedContentResponse> {
   const response = await makeModelRequest(
     model,
     Task.EMBED_CONTENT,
     apiKey,
-    false,
+    /* stream */ false,
     JSON.stringify(params),
     requestOptions,
+    fetch,
+    useAdc,
   );
   return response.json();
 }
 
 export async function batchEmbedContents(
-  apiKey: string,
   model: string,
+  apiKey: string | undefined,
   params: BatchEmbedContentsRequest,
-  requestOptions?: RequestOptions,
+  requestOptions?: SingleRequestOptions,
+  useAdc: boolean = false,
 ): Promise<BatchEmbedContentsResponse> {
-  const requestsWithModel: EmbedContentRequest[] = params.requests.map(
-    (request) => {
-      return { ...request, model };
-    },
-  );
   const response = await makeModelRequest(
     model,
     Task.BATCH_EMBED_CONTENTS,
     apiKey,
-    false,
-    JSON.stringify({ requests: requestsWithModel }),
+    /* stream */ false,
+    JSON.stringify(params),
     requestOptions,
+    fetch,
+    useAdc,
   );
   return response.json();
 }
