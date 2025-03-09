@@ -38,6 +38,7 @@ import {
   SafetySetting,
   SingleRequestOptions,
   StartChatParams,
+  StreamCallbacks,
   Tool,
   ToolConfig,
 } from "../../types";
@@ -48,8 +49,8 @@ import {
   formatCountTokensInput,
   formatEmbedContentInput,
   formatGenerateContentInput,
-  formatSystemInstruction,
 } from "../requests/request-helpers";
+import { GoogleGenerativeAIError } from "../errors";
 
 /**
  * Class for generative model APIs.
@@ -65,9 +66,10 @@ export class GenerativeModel {
   cachedContent: CachedContent;
 
   constructor(
-    public apiKey: string,
+    public apiKey: string | undefined,
     modelParams: ModelParams,
     private _requestOptions: RequestOptions = {},
+    public useAdc: boolean = false,
   ) {
     if (modelParams.model.includes("/")) {
       // Models may be named "models/model-name" or "tunedModels/model-name"
@@ -80,10 +82,17 @@ export class GenerativeModel {
     this.safetySettings = modelParams.safetySettings || [];
     this.tools = modelParams.tools;
     this.toolConfig = modelParams.toolConfig;
-    this.systemInstruction = formatSystemInstruction(
-      modelParams.systemInstruction,
-    );
+    this.systemInstruction = modelParams.systemInstruction;
     this.cachedContent = modelParams.cachedContent;
+
+    // Validate that we have either an API key or ADC enabled
+    if (!this.apiKey && !this.useAdc) {
+      throw new GoogleGenerativeAIError(
+        'Must provide either an API key or enable ADC. ' +
+        'Example: new GoogleGenerativeAI("your-api-key") or ' +
+        'new GoogleGenerativeAI({ useAdc: true })'
+      );
+    }
   }
 
   /**
@@ -104,8 +113,8 @@ export class GenerativeModel {
       ...requestOptions,
     };
     return generateContent(
-      this.apiKey,
       this.model,
+      this.apiKey,
       {
         generationConfig: this.generationConfig,
         safetySettings: this.safetySettings,
@@ -116,6 +125,7 @@ export class GenerativeModel {
         ...formattedParams,
       },
       generativeModelRequestOptions,
+      this.useAdc,
     );
   }
 
@@ -132,6 +142,7 @@ export class GenerativeModel {
   async generateContentStream(
     request: GenerateContentRequest | string | Array<string | Part>,
     requestOptions: SingleRequestOptions = {},
+    callbacks?: StreamCallbacks
   ): Promise<GenerateContentStreamResult> {
     const formattedParams = formatGenerateContentInput(request);
     const generativeModelRequestOptions: SingleRequestOptions = {
@@ -139,8 +150,8 @@ export class GenerativeModel {
       ...requestOptions,
     };
     return generateContentStream(
-      this.apiKey,
       this.model,
+      this.apiKey,
       {
         generationConfig: this.generationConfig,
         safetySettings: this.safetySettings,
@@ -151,6 +162,8 @@ export class GenerativeModel {
         ...formattedParams,
       },
       generativeModelRequestOptions,
+      callbacks,
+      this.useAdc,
     );
   }
 
@@ -160,18 +173,12 @@ export class GenerativeModel {
    */
   startChat(startChatParams?: StartChatParams): ChatSession {
     return new ChatSession(
-      this.apiKey,
-      this.model,
+      this,
+      startChatParams?.history || [],
       {
-        generationConfig: this.generationConfig,
-        safetySettings: this.safetySettings,
-        tools: this.tools,
-        toolConfig: this.toolConfig,
-        systemInstruction: this.systemInstruction,
-        cachedContent: this.cachedContent?.name,
-        ...startChatParams,
+        ...this._requestOptions,
+        ...startChatParams?.requestOptions,
       },
-      this._requestOptions,
     );
   }
 
@@ -200,10 +207,11 @@ export class GenerativeModel {
       ...requestOptions,
     };
     return countTokens(
-      this.apiKey,
       this.model,
+      this.apiKey,
       formattedParams,
       generativeModelRequestOptions,
+      this.useAdc,
     );
   }
 
@@ -224,10 +232,11 @@ export class GenerativeModel {
       ...requestOptions,
     };
     return embedContent(
-      this.apiKey,
       this.model,
+      this.apiKey,
       formattedParams,
       generativeModelRequestOptions,
+      this.useAdc,
     );
   }
 
@@ -247,10 +256,11 @@ export class GenerativeModel {
       ...requestOptions,
     };
     return batchEmbedContents(
-      this.apiKey,
       this.model,
+      this.apiKey,
       batchEmbedContentRequest,
       generativeModelRequestOptions,
+      this.useAdc,
     );
   }
 }
