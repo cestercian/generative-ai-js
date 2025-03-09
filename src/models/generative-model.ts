@@ -49,6 +49,7 @@ import {
   formatCountTokensInput,
   formatEmbedContentInput,
   formatGenerateContentInput,
+  formatSystemInstruction,
 } from "../requests/request-helpers";
 import { GoogleGenerativeAIError } from "../errors";
 
@@ -82,7 +83,9 @@ export class GenerativeModel {
     this.safetySettings = modelParams.safetySettings || [];
     this.tools = modelParams.tools;
     this.toolConfig = modelParams.toolConfig;
-    this.systemInstruction = modelParams.systemInstruction;
+    this.systemInstruction = formatSystemInstruction(
+      modelParams.systemInstruction,
+    );
     this.cachedContent = modelParams.cachedContent;
 
     // Validate that we have either an API key or ADC enabled
