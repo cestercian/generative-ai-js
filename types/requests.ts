@@ -24,6 +24,26 @@ import {
   ToolConfig,
 } from "./function-calling";
 import { GoogleSearchRetrievalTool } from "./search-grounding";
+import { EnhancedGenerateContentResponse } from "./responses";
+
+/**
+ * Callbacks for streaming responses
+ * @public
+ */
+export interface StreamCallbacks {
+  /**
+   * Called when a new chunk is received
+   */
+  onChunk?: (response: EnhancedGenerateContentResponse) => void;
+  /**
+   * Called when the stream is complete
+   */
+  onComplete?: (response: EnhancedGenerateContentResponse) => void;
+  /**
+   * Called when there is an error
+   */
+  onError?: (error: Error) => void;
+}
 
 /**
  * Base parameters for a number of methods.
