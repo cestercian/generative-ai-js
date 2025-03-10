@@ -21,6 +21,7 @@ import {
   GenerateContentResponse,
   GenerateContentStreamResult,
   Part,
+  StreamCallbacks,
 } from "../../types";
 import {
   GoogleGenerativeAIAbortError,
@@ -37,17 +38,49 @@ const responseLineRE = /^data\: (.*)(?:\n\n|\r\r|\r\n\r\n)/;
  * GenerateContentResponse.
  *
  * @param response - Response from a fetch call
+ * @param callbacks - Optional callbacks for stream events
  */
-export function processStream(response: Response): GenerateContentStreamResult {
+export function processStream(
+  response: Response,
+  callbacks?: StreamCallbacks
+): GenerateContentStreamResult {
   const inputStream = response.body!.pipeThrough(
     new TextDecoderStream("utf8", { fatal: true }),
   );
   const responseStream =
     getResponseStream<GenerateContentResponse>(inputStream);
   const [stream1, stream2] = responseStream.tee();
+  
+  const stream = generateResponseSequence(stream1);
+  const responsePromise = getResponsePromise(stream2);
+  
+  // Add callbacks if provided
+  if (callbacks) {
+    // Handle onChunk callback
+    if (callbacks.onChunk) {
+      const originalNext = stream.next;
+      stream.next = async function() {
+        const result = await originalNext.call(this);
+        if (!result.done && result.value) {
+          callbacks.onChunk?.(result.value);
+        }
+        return result;
+      };
+    }
+    
+    // Handle onComplete and onError callbacks
+    responsePromise
+      .then((response) => {
+        callbacks.onComplete?.(response);
+      })
+      .catch((error) => {
+        callbacks.onError?.(error);
+      });
+  }
+  
   return {
-    stream: generateResponseSequence(stream1),
-    response: getResponsePromise(stream2),
+    stream,
+    response: responsePromise,
   };
 }
 

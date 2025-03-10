@@ -21,16 +21,29 @@ import {
   GenerateContentResult,
   GenerateContentStreamResult,
   SingleRequestOptions,
+  StreamCallbacks,
 } from "../../types";
 import { Task, makeModelRequest } from "../requests/request";
 import { addHelpers } from "../requests/response-helpers";
 import { processStream } from "../requests/stream-reader";
 
+/**
+ * Generates content from the model with streaming enabled.
+ * @param model - The model to use
+ * @param apiKey - The API key to use for authentication
+ * @param params - The parameters for the request
+ * @param requestOptions - Options for the request
+ * @param callbacks - Callbacks for the stream
+ * @param useAdc - Whether to use Application Default Credentials
+ * @returns A promise that resolves to a GenerateContentStreamResult
+ */
 export async function generateContentStream(
-  apiKey: string,
   model: string,
+  apiKey: string | undefined,
   params: GenerateContentRequest,
   requestOptions: SingleRequestOptions,
+  callbacks?: StreamCallbacks,
+  useAdc: boolean = false,
 ): Promise<GenerateContentStreamResult> {
   const response = await makeModelRequest(
     model,
@@ -39,15 +52,27 @@ export async function generateContentStream(
     /* stream */ true,
     JSON.stringify(params),
     requestOptions,
+    fetch,
+    useAdc,
   );
-  return processStream(response);
+  return processStream(response, callbacks);
 }
 
+/**
+ * Generates content from the model without streaming.
+ * @param model - The model to use
+ * @param apiKey - The API key to use for authentication
+ * @param params - The parameters for the request
+ * @param requestOptions - Options for the request
+ * @param useAdc - Whether to use Application Default Credentials
+ * @returns A promise that resolves to a GenerateContentResult
+ */
 export async function generateContent(
-  apiKey: string,
   model: string,
+  apiKey: string | undefined,
   params: GenerateContentRequest,
   requestOptions?: SingleRequestOptions,
+  useAdc: boolean = false,
 ): Promise<GenerateContentResult> {
   const response = await makeModelRequest(
     model,
@@ -56,6 +81,8 @@ export async function generateContent(
     /* stream */ false,
     JSON.stringify(params),
     requestOptions,
+    fetch,
+    useAdc,
   );
   const responseJson: GenerateContentResponse = await response.json();
   const enhancedResponse = addHelpers(responseJson);
